@@ -1,0 +1,25 @@
+global:
+  security:
+    allowInsecureImages: true
+architecture: replication  
+auth:
+  rootPassword: "password"
+  createDatabase: true
+  database: "my_database"
+  username: "mohamed"
+  password: "password"
+volumePermissions:
+  enabled: false  
+primary:           
+  persistence:
+    storageClass: "gp2" 
+    size: 8Gi
+secondary:
+  replicaCount: 1
+  persistence:
+    storageClass: "gp2"
+    size: 8Gi
+image:
+  registry: docker.io
+  tag: latest
+  repository: bitnamilegacy/mysql

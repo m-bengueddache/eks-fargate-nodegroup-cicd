@@ -1,0 +1,28 @@
+appName: phpmyadmin
+appImage: phpmyadmin
+appReplicas: 2
+containerPort: 80
+containerEnvVars: 
+- name: MYSQL_ROOT_PASSWORD
+  valueFrom:
+    secretKeyRef:
+      name: java-app-secret
+      key: mysql-root-password
+- name: PMA_HOST
+  valueFrom:
+    configMapKeyRef:
+      name: java-app-configmap
+      key: database_url
+
+servicePort: 8081
+serviceType: ClusterIP
+
+configMap:
+  enabled: false
+
+secret:
+  enabled: false
+
+ingress:
+  enabled: false
+

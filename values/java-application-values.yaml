@@ -1,0 +1,61 @@
+appName: java-app
+appImage: mb938/demo-app:java-app
+appReplicas: 2
+containerPort: 8080
+imagePullSecrets:
+- my-registry-key
+containerEnvVars:
+- name: DB_USER
+  valueFrom:
+    secretKeyRef:
+      name: java-app-secret
+      key: mysql-user-username
+- name: DB_PWD
+  valueFrom:
+    secretKeyRef:
+      name: java-app-secret
+      key: mysql-user-password
+- name: DB_NAME
+  valueFrom:
+    secretKeyRef:
+      name: java-app-secret
+      key: database_name
+- name: DB_SERVER
+  valueFrom:
+    configMapKeyRef:
+      name: java-app-configmap
+      key: database_url
+
+servicePort: 8080
+serviceType: ClusterIP
+
+configMap:
+  enabled: true
+  name: java-app-configmap
+  data:
+  - key: database_url
+    value: "mysqldb-primary.default.svc.cluster.local"
+
+secret:
+  enabled: true
+  name: java-app-secret
+  data:
+  - key: mysql-root-password
+    value: "password"
+  - key: mysql-user-username
+    value: "mohamed"
+  - key: mysql-user-password
+    value: "password"
+  - key: database_name
+    value: "my_database"
+
+ingress:
+  enabled: true
+  name: java-app
+  className: nginx
+  host: 172-239-6-224.ip.linodeusercontent.com
+  paths:
+  - path: /
+    pathType: Prefix
+    serviceName: java-app
+    servicePort: 8080

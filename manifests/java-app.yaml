@@ -1,0 +1,56 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: $APP_NAME
+  namespace: my-app
+spec:
+  selector:
+    matchLabels:
+      app: $APP_NAME
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: $APP_NAME
+    spec:
+      imagePullSecrets:
+      - name: aws-registry-key
+      containers:
+      - name: $APP_NAME
+        image: $DOCKER_REPO:$IMAGE_NAME
+        ports:
+        - containerPort: 8080
+        env:
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: java-app-secret
+              key: mysql-user-username
+        - name: DB_PWD
+          valueFrom:
+            secretKeyRef:
+              name: java-app-secret
+              key: mysql-user-password
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: java-app-secret
+              key: database_name
+        - name: DB_SERVER
+          valueFrom:
+            configMapKeyRef:
+              name: java-app-configmap
+              key: database_url
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: java-app-service
+  namespace: my-app
+spec:
+  selector:
+    app: $APP_NAME
+  ports:
+  - protocol: TCP
+    port: 8080
+    targetPort: 8080

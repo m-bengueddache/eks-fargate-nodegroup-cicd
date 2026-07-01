@@ -1,0 +1,17 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+    name: java-app
+spec:
+  ingressClassName: nginx          # This rule is managed by the Nginx controller
+  rules:
+  - host: 172-239-7-117.ip.linodeusercontent.com  # Hostname provided by Linode
+    http:
+      paths:
+        - path: /
+          pathType: Prefix
+          backend:
+            service:
+              name: java-app-service
+              port:
+                number: 8080

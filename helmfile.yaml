@@ -1,0 +1,10 @@
+releases:
+  - name: java-app
+    chart: charts/app
+    values:
+      - values/java-application-values.yaml
+
+  - name: phpmyadmin
+    chart: charts/app
+    values:
+      - values/phpmyadmin-values.yaml
