@@ -20,12 +20,45 @@
 
 ---
 
-## What this demonstrates
+## FR — Description
 
-- **Hybrid compute allocation** — stateless application workload on Fargate (`my-app` namespace) isolated from stateful infrastructure (MySQL, phpMyAdmin) on a managed EC2 nodegroup (`default` namespace), with cross-namespace service discovery via Kubernetes DNS.
-- **Stateful workloads with Helm** — MySQL deployed in `replication` mode (primary/secondary) with EBS-backed persistence, provisioned dynamically via the **AWS EBS CSI driver** (IRSA-authenticated, no static credentials in-cluster).
-- **Cluster Autoscaler via IRSA** — the nodegroup scales automatically based on pending pod demand, authenticated through a scoped IAM role (OIDC federation), not long-lived keys.
-- **CI/CD with Jenkins** — Gradle build, Docker image pushed to Amazon ECR, Kubernetes manifests templated with `envsubst` and applied via `kubectl`.
+### Partie 1 — Compute hybride : Fargate + Nodegroup
+
+Profil Fargate dédié (namespace `my-app`) pour l'application Spring Boot, isolé du nodegroup EC2 managé (namespace `default`) qui héberge MySQL et phpMyAdmin.
+
+Un namespace Kubernetes est une frontière logique (RBAC, quotas), pas une frontière réseau — tous les pods du cluster partagent le même réseau VPC, que ce soit sur Fargate ou sur EC2. Seule la résolution DNS courte est limitée au namespace courant : l'application cible donc le service MySQL par son FQDN complet (`service.namespace.svc.cluster.local`) plutôt que par son nom court, puisqu'ils sont dans des namespaces différents.
+
+### Partie 2 — Déploiement stateful avec Helm
+
+MySQL déployé en mode `replication` (primaire/secondaire) via le chart Bitnami, avec persistance EBS provisionnée dynamiquement par l'**EBS CSI driver** (authentifié via IRSA, sans credentials statiques dans le cluster). phpMyAdmin déployé en complément pour l'administration de la base.
+
+### Partie 3 — Cluster Autoscaler (IRSA)
+
+Le nodegroup EC2 s'ajuste automatiquement à la demande de pods en attente, via un rôle IAM restreint (fédération OIDC) plutôt que des clés statiques. Les Service Accounts Kubernetes ne sont pas des entités IAM : IRSA fait le pont en échangeant un token JWT signé par l'émetteur OIDC du cluster contre des credentials AWS temporaires, scopés au strict nécessaire (`autoscaling:*`, `ec2:Describe*`).
+
+### Partie 4 — Pipeline CI/CD Jenkins
+
+Build Gradle, image Docker poussée vers Amazon ECR, manifests Kubernetes templatés avec `envsubst` puis appliqués via `kubectl`. Le tag d'image est généré dynamiquement (numéro de build Jenkins), jamais hardcodé dans les manifests déployés.
+
+## EN — Description
+
+### Part 1 — Hybrid compute: Fargate + Nodegroup
+
+Dedicated Fargate profile (`my-app` namespace) for the Spring Boot application, isolated from the managed EC2 nodegroup (`default` namespace) hosting MySQL and phpMyAdmin.
+
+A Kubernetes namespace is a logical boundary (RBAC, quotas), not a network one — all pods in the cluster share the same VPC network, whether on Fargate or EC2. Only short-form DNS resolution is limited to the current namespace: the application therefore targets the MySQL service by its full FQDN (`service.namespace.svc.cluster.local`) rather than its short name, since they live in different namespaces.
+
+### Part 2 — Stateful deployment with Helm
+
+MySQL deployed in `replication` mode (primary/secondary) via the Bitnami chart, with EBS persistence dynamically provisioned by the **EBS CSI driver** (IRSA-authenticated, no static credentials in-cluster). phpMyAdmin deployed alongside for database administration.
+
+### Part 3 — Cluster Autoscaler (IRSA)
+
+The EC2 nodegroup scales automatically based on pending pod demand, through a scoped IAM role (OIDC federation) rather than static keys. Kubernetes Service Accounts aren't IAM entities — IRSA bridges that gap by exchanging a JWT token signed by the cluster's OIDC issuer for temporary AWS credentials, scoped to the bare minimum (`autoscaling:*`, `ec2:Describe*`).
+
+### Part 4 — Jenkins CI/CD pipeline
+
+Gradle build, Docker image pushed to Amazon ECR, Kubernetes manifests templated with `envsubst` and applied via `kubectl`. The image tag is generated dynamically (Jenkins build number), never hardcoded in the deployed manifests.
 
 ---
 
@@ -92,11 +125,3 @@
 ├── helmfile.yaml                        # Helmfile release definitions
 └── src/                                 # Java Spring Boot application source
 ```
-
----
-
-## Key design decisions
-
-- **Why split compute between Fargate and a nodegroup?** Fargate removes node management for the stateless app tier, while stateful services (databases) stay on EC2-backed nodes where persistent EBS volumes and node-level tuning are supported.
-- **Why cross-namespace FQDN for the database connection?** Kubernetes namespaces are a logical boundary, not a network one — pods across namespaces share the same cluster network, but short-form DNS only resolves within the same namespace. The app therefore targets the MySQL service by its full `service.namespace.svc.cluster.local` name.
-- **Why IRSA for the EBS CSI driver and Cluster Autoscaler?** Both need AWS API access (EC2 volume operations, Auto Scaling Group operations) without embedding long-lived credentials in the cluster — IAM Roles for Service Accounts exchange short-lived, automatically rotated tokens for temporary AWS credentials.
