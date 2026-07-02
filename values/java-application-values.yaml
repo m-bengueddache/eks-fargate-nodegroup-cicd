@@ -6,14 +6,20 @@ imagePullSecrets:
 - my-registry-key
 containerEnvVars:
 - name: DB_USER
-  value: "mohamed"
+  valueFrom:
+    secretKeyRef:
+      name: java-app-secret
+      key: mysql-user-username
 - name: DB_PWD
   valueFrom:
     secretKeyRef:
-      name: mysqldb
-      key: mysql-password
+      name: java-app-secret
+      key: mysql-user-password
 - name: DB_NAME
-  value: "my_database"
+  valueFrom:
+    secretKeyRef:
+      name: java-app-secret
+      key: database_name
 - name: DB_SERVER
   valueFrom:
     configMapKeyRef:
@@ -31,7 +37,17 @@ configMap:
     value: "mysqldb-primary.default.svc.cluster.local"
 
 secret:
-  enabled: false
+  enabled: true
+  name: java-app-secret
+  data:
+  - key: mysql-root-password
+    value: "password"
+  - key: mysql-user-username
+    value: "mohamed"
+  - key: mysql-user-password
+    value: "password"
+  - key: database_name
+    value: "my_database"
 
 ingress:
   enabled: true

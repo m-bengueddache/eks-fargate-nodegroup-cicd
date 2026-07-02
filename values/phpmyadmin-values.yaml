@@ -6,7 +6,7 @@ containerEnvVars:
 - name: MYSQL_ROOT_PASSWORD
   valueFrom:
     secretKeyRef:
-      name: mysqldb
+      name: java-app-secret
       key: mysql-root-password
 - name: PMA_HOST
   valueFrom:

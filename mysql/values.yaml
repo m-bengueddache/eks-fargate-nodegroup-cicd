@@ -1,16 +1,18 @@
 global:
   security:
     allowInsecureImages: true
-architecture: replication
+architecture: replication  
 auth:
+  rootPassword: "password"
   createDatabase: true
   database: "my_database"
   username: "mohamed"
+  password: "password"
 volumePermissions:
-  enabled: false
-primary:
+  enabled: false  
+primary:           
   persistence:
-    storageClass: "gp2"
+    storageClass: "gp2" 
     size: 8Gi
 secondary:
   replicaCount: 1
