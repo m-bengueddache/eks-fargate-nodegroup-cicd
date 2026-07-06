@@ -95,6 +95,19 @@ flowchart LR
 - [ ] Externalize secrets via AWS Secrets Manager + External Secrets Operator
 - [ ] Tag releases from Git tags instead of the Jenkins build number
 
+## Troubleshooting
+
+Real issues hit while building this, kept because they're more useful than a clean success story:
+
+| Problem | Cause | Fix |
+|---|---|---|
+| Jenkins pipeline crashes with `NotSerializableException` | A `java.util.regex.Matcher` (used to parse the app version) was kept in a local variable across a `script{}` block that calls `sh` — Jenkins' CPS transformation tries to serialize the entire script state at each checkpoint and fails on non-serializable objects. | Isolate regex parsing in a method annotated `@NonCPS`, or shell out to `grep`/`sed` instead of Groovy regex. |
+| `kubectl create namespace` fails with `AlreadyExists` on the second pipeline run | `kubectl create` is not idempotent. | Use `kubectl create namespace X --dry-run=client -o yaml \| kubectl apply -f -` instead. |
+| `docker pull` of a known-public image fails with `401 Unauthorized` inside the Jenkins container | A stale/expired Docker Hub session in `~/.docker/config.json` is used for *every* interaction with `docker.io`, including anonymous pulls — and that config is scoped to the user the shell step runs as, which may not be the user a manual `docker exec` lands on. | `docker logout` as the actual pipeline user (`docker exec -u jenkins -it <container> bash`, not the default root shell) before retrying. |
+| ECR-backed pod suddenly gets `ErrImagePull` after ~12 hours | ECR authentication tokens (`aws ecr get-login-password`) expire after 12h; a token cached as a static credential goes stale. | Regenerate the token on every pipeline run from already-configured AWS credentials — never store it as a long-lived Jenkins credential. |
+| Cluster Autoscaler pod never becomes ready after a Helm install | The chart's `image.tag` didn't match the EKS control plane's minor version. | Match the Cluster Autoscaler image tag to `kubectl version` (server minor version), within ±1 minor version if an exact match isn't published yet. |
+| `kubectl get pods -l app.kubernetes.io/instance=<release>` returns nothing after a Helm install | Helm-created resource names are prefixed/suffixed by the chart, not necessarily equal to the release name (e.g. `cluster-autoscaler-aws-cluster-autoscaler-...`). | Filter by the `app.kubernetes.io/instance` label rather than assuming an exact resource name. |
+
 ---
 
 ## FR — Détails d'implémentation
