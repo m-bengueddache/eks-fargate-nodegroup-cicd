@@ -3,11 +3,9 @@ global:
     allowInsecureImages: true
 architecture: replication  
 auth:
-  rootPassword: "password"
   createDatabase: true
   database: "my_database"
   username: "mohamed"
-  password: "password"
 volumePermissions:
   enabled: false  
 primary:           
